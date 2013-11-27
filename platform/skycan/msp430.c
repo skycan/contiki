@@ -92,6 +92,11 @@ msp430_set_dco_speed(unsigned long mhz)
 
   multiplier = mhz / 32768UL - 1;
 
+  /* Set DCO FLL reference = REFO */
+  UCSCTL3 |= SELREF_2;
+  /* Set ACLK = REFO */
+  UCSCTL4 |= SELA_2;
+
   __bis_SR_register(SCG0);
   UCSCTL0 = 0x0000;
 
@@ -103,19 +108,19 @@ msp430_set_dco_speed(unsigned long mhz)
 
   __bic_SR_register(SCG0);
 
+  // Worst-case settling time for the DCO when the DCO range bits have been
+  // changed is n x 32 x 32 x f_MCLK / f_FLL_reference. See UCS chapter in 5xx
+  // UG for optimization.
+  // 32 x 32 x 12 MHz / 32,768 Hz = 375000 = MCLK cycles for DCO to settle
+  __delay_cycles(375000);
+
   do {
     /* Clear XT2,XT1,DCO fault flags */
-    UCSCTL7 &= ~(XT2OFFG + XT1LFOFFG + XT1HFOFFG + DCOFFG);
+    UCSCTL7 &= ~(XT2OFFG + XT1LFOFFG + DCOFFG);
     /* Clear fault flags */
     SFRIFG1 &= ~OFIFG;
-
-    __delay_cycles(10000);
     /* Test oscillator fault flag */
   } while(SFRIFG1 & OFIFG);
-
-  UCSCTL3 |= SELREF_0;
-
-  UCSCTL4 |= SELA_0;
 
   eint();
 }
