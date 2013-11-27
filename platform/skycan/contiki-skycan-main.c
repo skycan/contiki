@@ -34,7 +34,6 @@
 #include <stdarg.h>
 
 #include "dev/button-sensor.h"
-#include "dev/cc2420.h"
 #include "dev/flash.h"
 #include "dev/leds.h"
 #include "dev/serial-line.h"
@@ -50,8 +49,6 @@
 #include "sys/autostart.h"
 
 #include "sys/node-id.h"
-#include "lcd.h"
-#include "duty-cycle-scroller.h"
 
 #if WITH_UIP6
 #include "net/uip-ds6.h"
@@ -131,8 +128,6 @@ main(int argc, char **argv)
   
   rtimer_init();
 
-  lcd_init();
-
   PRINTF(CONTIKI_VERSION_STRING "\n");
   /*
    * Hardware initialization done!
@@ -178,8 +173,6 @@ main(int argc, char **argv)
 
   set_rime_addr();
 
-  cc2420_init();
-
   {
     uint8_t longaddr[8];
     uint16_t shortaddr;
@@ -191,8 +184,6 @@ main(int argc, char **argv)
     printf("MAC %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n",
            longaddr[0], longaddr[1], longaddr[2], longaddr[3],
            longaddr[4], longaddr[5], longaddr[6], longaddr[7]);
-
-    cc2420_set_pan_addr(IEEE802154_PANID, shortaddr, longaddr);
   }
 
   leds_off(LEDS_ALL);
@@ -203,63 +194,6 @@ main(int argc, char **argv)
     PRINTF("Node id not set.\n");
   }
 
-#if WITH_UIP6
-  memcpy(&uip_lladdr.addr, node_mac, sizeof(uip_lladdr.addr));
-  /* Setup nullmac-like MAC for 802.15.4 */
-
-  queuebuf_init();
-
-  NETSTACK_RDC.init();
-  NETSTACK_MAC.init();
-  NETSTACK_NETWORK.init();
-
-  printf("%s %lu %u\n",
-         NETSTACK_RDC.name,
-         CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0 ? 1:
-                         NETSTACK_RDC.channel_check_interval()),
-         CC2420_CONF_CHANNEL);
-
-  process_start(&tcpip_process, NULL);
-
-  printf("IPv6 ");
-  {
-    uip_ds6_addr_t *lladdr;
-    int i;
-    lladdr = uip_ds6_get_link_local(-1);
-    for(i = 0; i < 7; ++i) {
-      printf("%02x%02x:", lladdr->ipaddr.u8[i * 2],
-             lladdr->ipaddr.u8[i * 2 + 1]);
-    }
-    printf("%02x%02x\n", lladdr->ipaddr.u8[14], lladdr->ipaddr.u8[15]);
-  }
-
-  if(!UIP_CONF_IPV6_RPL) {
-    uip_ipaddr_t ipaddr;
-    int i;
-    uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
-    uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
-    uip_ds6_addr_add(&ipaddr, 0, ADDR_TENTATIVE);
-    printf("Tentative global IPv6 address ");
-    for(i = 0; i < 7; ++i) {
-      printf("%02x%02x:",
-             ipaddr.u8[i * 2], ipaddr.u8[i * 2 + 1]);
-    }
-    printf("%02x%02x\n",
-           ipaddr.u8[7 * 2], ipaddr.u8[7 * 2 + 1]);
-  }
-
-#else /* WITH_UIP6 */
-
-  NETSTACK_RDC.init();
-  NETSTACK_MAC.init();
-  NETSTACK_NETWORK.init();
-
-  printf("%s %lu %u\n",
-         NETSTACK_RDC.name,
-         CLOCK_SECOND / (NETSTACK_RDC.channel_check_interval() == 0? 1:
-                         NETSTACK_RDC.channel_check_interval()),
-         CC2420_CONF_CHANNEL);
-#endif /* WITH_UIP6 */
 
 #if !WITH_UIP6
   uart1_set_input(serial_line_input_byte);
@@ -280,9 +214,6 @@ main(int argc, char **argv)
 
   print_processes(autostart_processes);
   autostart_start(autostart_processes);
-
-  duty_cycle_scroller_start(CLOCK_SECOND * 2);
-
   /*
    * This is the scheduler loop.
    */
