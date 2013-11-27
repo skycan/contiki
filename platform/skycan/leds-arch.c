@@ -42,31 +42,46 @@
 #include "dev/leds.h"
 
 /* LED ports */
-#define LEDS_CONF_RED    0x01
-#define LEDS_CONF_GREEN  0x02
-#define LEDS_CONF_YELLOW 0x02
+#define LEDS_CONF_GREEN  (1<<2)
+#define LEDS_CONF_YELLOW (1<<3)
+#define LEDS_CONF_RED    (1<<4)
 
 /*---------------------------------------------------------------------------*/
 void
 leds_arch_init(void)
 {
-  /* only red and green for now */
-  P1DIR |= LEDS_CONF_RED;
-  P1DIR |= LEDS_CONF_GREEN;
+  P2DIR |= LEDS_CONF_RED;
+  P2DIR |= LEDS_CONF_GREEN;
+  P2DIR |= LEDS_CONF_YELLOW;
 }
 /*---------------------------------------------------------------------------*/
 unsigned char
 leds_arch_get(void)
 {
-  return ((P1OUT & LEDS_CONF_RED) ? 0 : LEDS_RED)
-    | ((P1OUT & LEDS_CONF_GREEN) ? 0 : LEDS_GREEN);
+  return ((P2OUT & LEDS_CONF_RED) ? 0 : LEDS_RED)
+    | ((P2OUT & LEDS_CONF_GREEN) ? 0 : LEDS_GREEN)
+    | ((P2OUT & LEDS_CONF_GREEN) ? 0 : LEDS_CONF_YELLOW);
 }
 /*---------------------------------------------------------------------------*/
 void
 leds_arch_set(unsigned char leds)
 {
-  P1OUT = (P1OUT & ~LEDS_CONF_RED) | ((leds & LEDS_RED) ? LEDS_CONF_RED : 0);
-  P1OUT = (P1OUT & ~LEDS_CONF_GREEN) |
-    ((leds & LEDS_GREEN) ? LEDS_CONF_GREEN : 0);
+  if(leds & LEDS_RED) {
+    P2OUT |= LEDS_CONF_RED;
+  } else {
+    P2OUT &= ~LEDS_CONF_RED;
+  }
+  
+  if(leds & LEDS_GREEN) {
+    P2OUT |= LEDS_CONF_GREEN;
+  } else {
+    P2OUT &= ~LEDS_CONF_GREEN;
+  }
+  
+  if(leds & LEDS_YELLOW) {
+    P2OUT |= LEDS_CONF_YELLOW;
+  } else {
+    P2OUT &= ~LEDS_CONF_YELLOW;
+  }
 }
 /*---------------------------------------------------------------------------*/
