@@ -43,10 +43,6 @@
  * changeable
  */
 
-#ifndef WITH_LCD
-#define WITH_LCD 0
-#endif /* 0 */
-
 /* CPU target speed in Hz */
 #define F_CPU 8000000uL // 8MHz by default
 
@@ -67,9 +63,6 @@
 typedef unsigned short uip_stats_t;
 typedef unsigned long clock_time_t;
 typedef unsigned long off_t;
-
-/* the low-level radio driver */
-#define NETSTACK_CONF_RADIO   cc2420_driver
 
 /*
  * Definitions below are dictated by the hardware and not really
@@ -130,74 +123,5 @@ typedef unsigned long off_t;
 
 #define SPI_FLASH_HOLD()                ( P5OUT &= ~BV(FLASH_HOLD) )
 #define SPI_FLASH_UNHOLD()              ( P5OUT |=  BV(FLASH_HOLD) )
-
-
-/*
- * SPI bus - CC2420 pin configuration.
- */
-
-#define CC2420_CONF_SYMBOL_LOOP_COUNT 1302      /* 326us msp430X @ 8MHz */
-
-/* P1.2 - Input: FIFOP from CC2420 */
-#define CC2420_FIFOP_PORT(type)    P1##type
-#define CC2420_FIFOP_PIN           6
-/* P1.3 - Input: FIFO from CC2420 */
-#define CC2420_FIFO_PORT(type)     P1##type
-#define CC2420_FIFO_PIN            5
-/* P1.4 - Input: CCA from CC2420 */
-#define CC2420_CCA_PORT(type)      P1##type
-#define CC2420_CCA_PIN             7
-/* P4.1 - Input:  SFD from CC2420 */
-#define CC2420_SFD_PORT(type)      P1##type
-#define CC2420_SFD_PIN             3
- /* P3.0 - Output: SPI Chip Select (CS_N) */
-#define CC2420_CSN_PORT(type)      P3##type
-#define CC2420_CSN_PIN             0
-/* P4.5 - Output: VREG_EN to CC2420 */
-#define CC2420_VREG_PORT(type)     P1##type
-#define CC2420_VREG_PIN            4
-/* P4.6 - Output: RESET_N to CC2420 */
-#define CC2420_RESET_PORT(type)    P1##type
-#define CC2420_RESET_PIN           2
-
-
-#define CC2420_IRQ_VECTOR PORT1_VECTOR
-
-/* Pin status. */
-#define CC2420_FIFOP_IS_1 (!!(CC2420_FIFOP_PORT(IN) & BV(CC2420_FIFOP_PIN)))
-#define CC2420_FIFO_IS_1  (!!(CC2420_FIFO_PORT(IN) & BV(CC2420_FIFO_PIN)))
-#define CC2420_CCA_IS_1   (!!(CC2420_CCA_PORT(IN) & BV(CC2420_CCA_PIN)))
-#define CC2420_SFD_IS_1   (!!(CC2420_SFD_PORT(IN) & BV(CC2420_SFD_PIN)))
-
-/* The CC2420 reset pin. */
-#define SET_RESET_INACTIVE()   (CC2420_RESET_PORT(OUT) |=  BV(CC2420_RESET_PIN))
-#define SET_RESET_ACTIVE()     (CC2420_RESET_PORT(OUT) &= ~BV(CC2420_RESET_PIN))
-
-/* CC2420 voltage regulator enable pin. */
-#define SET_VREG_ACTIVE()       (CC2420_VREG_PORT(OUT) |=  BV(CC2420_VREG_PIN))
-#define SET_VREG_INACTIVE()     (CC2420_VREG_PORT(OUT) &= ~BV(CC2420_VREG_PIN))
-
-/* CC2420 rising edge trigger for external interrupt (FIFOP). */
-#define CC2420_FIFOP_INT_INIT() do {                  \
-    CC2420_FIFOP_PORT(IES) &= ~BV(CC2420_FIFOP_PIN);  \
-    CC2420_CLEAR_FIFOP_INT();                         \
-  } while(0)
-
-/* FIFOP on external interrupt 0. */
-#define CC2420_ENABLE_FIFOP_INT()  do {CC2420_FIFOP_PORT(IE) |= BV(CC2420_FIFOP_PIN);} while(0)
-#define CC2420_DISABLE_FIFOP_INT() do {CC2420_FIFOP_PORT(IE) &= ~BV(CC2420_FIFOP_PIN);} while(0)
-#define CC2420_CLEAR_FIFOP_INT()   do {CC2420_FIFOP_PORT(IFG) &= ~BV(CC2420_FIFOP_PIN);} while(0)
-
-
-/*
- * Enables/disables CC2420 access to the SPI bus (not the bus).
- * (Chip Select)
- */
-
- /* ENABLE CSn (active low) */
-#define CC2420_SPI_ENABLE()     (CC2420_CSN_PORT(OUT) &= ~BV(CC2420_CSN_PIN))
- /* DISABLE CSn (active low) */
-#define CC2420_SPI_DISABLE()    (CC2420_CSN_PORT(OUT) |=  BV(CC2420_CSN_PIN))
-#define CC2420_SPI_IS_ENABLED() ((CC2420_CSN_PORT(OUT) & BV(CC2420_CSN_PIN)) != BV(CC2420_CSN_PIN))
 
 #endif /* __PLATFORM_CONF_H__ */
