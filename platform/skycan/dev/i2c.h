@@ -55,16 +55,15 @@ void i2c_transmit_n(uint8_t byte_ctr, uint8_t *tx_buf);
 uint8_t i2c_busy(void);
 
 //XXX Should these defines be in the contiki-conf.h to make it more platform-independent?
-#define I2C_PxDIR   P5DIR
-#define I2C_PxIN    P5IN
-#define I2C_PxOUT   P5OUT
-#define I2C_PxSEL   P5SEL
-#define I2C_PxSEL2  P5SEL2
-#define I2C_PxREN   P5REN
+#define I2C_PxDIR   P3DIR
+#define I2C_PxIN    P3IN
+#define I2C_PxOUT   P3OUT
+#define I2C_PxSEL   P3SEL
+#define I2C_PxREN   P3REN
 
 
-#define I2C_SDA       (1 << 1)    //SDA == P5.1 
-#define I2C_SCL       (1 << 2)    //SCL == P5.2
+#define I2C_SDA       (1 << 0)    // SDA == P3.0 
+#define I2C_SCL       (1 << 1)    // SCL == P3.1
 #define I2C_PRESC_1KHZ_LSB      0x00 
 #define I2C_PRESC_1KHZ_MSB      0x20
 #define I2C_PRESC_100KHZ_LSB    0x50 

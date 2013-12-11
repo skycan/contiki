@@ -61,19 +61,19 @@ volatile unsigned int i;	// volatile to prevent optimization
 //-----------------------------------------------------------------------------
 void
 i2c_receiveinit(uint8_t slave_address) {
-  UCB1CTL1 = UCSWRST;                    // Enable SW reset
-  UCB1CTL0 = UCMST + UCMODE_3 + UCSYNC;  // I2C Master, synchronous mode
-  UCB1CTL1 = UCSSEL_2 | UCSWRST;         // Use SMCLK, keep SW reset
-  UCB1BR0  = I2C_PRESC_400KHZ_LSB;       // prescaler for 400 kHz data rate
-  UCB1BR1  = I2C_PRESC_400KHZ_MSB;
-  UCB1I2CSA = slave_address;	         // set slave address
+  UCB0CTL1 = UCSWRST;                    // Enable SW reset
+  UCB0CTL0 = UCMST + UCMODE_3 + UCSYNC;  // I2C Master, synchronous mode
+  UCB0CTL1 = UCSSEL_2 | UCSWRST;         // Use SMCLK, keep SW reset
+  UCB0BR0  = I2C_PRESC_400KHZ_LSB;       // prescaler for 400 kHz data rate
+  UCB0BR1  = I2C_PRESC_400KHZ_MSB;
+  UCB0I2CSA = slave_address;	         // set slave address
 
-  UCB1CTL1 &= ~UCTR;		         // I2C Receiver 
+  UCB0CTL1 &= ~UCTR;		         // I2C Receiver 
 
-  UCB1CTL1 &= ~UCSWRST;	                 // Clear SW reset, resume operation
-  UCB1I2CIE = UCNACKIE;
+  UCB0CTL1 &= ~UCSWRST;	                 // Clear SW reset, resume operation
+  UCB0IE = UCNACKIE;
 #if I2C_RX_WITH_INTERRUPT
-  UC1IE = UCB1RXIE;                      // Enable RX interrupt if desired
+  UCB0IE = UCRXIE;                      // Enable RX interrupt if desired
 #endif
 }
 
@@ -88,16 +88,16 @@ i2c_receiveinit(uint8_t slave_address) {
 //------------------------------------------------------------------------------
 void
 i2c_transmitinit(uint8_t slave_address) {
-  UCB1CTL1 |= UCSWRST;		           // Enable SW reset
-  UCB1CTL0 |= (UCMST | UCMODE_3 | UCSYNC); // I2C Master, synchronous mode
-  UCB1CTL1  = UCSSEL_2 + UCSWRST;          // Use SMCLK, keep SW reset
-  UCB1BR0   = I2C_PRESC_400KHZ_LSB;        // prescaler for 400 kHz data rate
-  UCB1BR1   = I2C_PRESC_400KHZ_MSB;
-  UCB1I2CSA = slave_address;	           // Set slave address
+  UCB0CTL1 |= UCSWRST;		           // Enable SW reset
+  UCB0CTL0 |= (UCMST | UCMODE_3 | UCSYNC); // I2C Master, synchronous mode
+  UCB0CTL1  = UCSSEL_2 + UCSWRST;          // Use SMCLK, keep SW reset
+  UCB0BR0   = I2C_PRESC_400KHZ_LSB;        // prescaler for 400 kHz data rate
+  UCB0BR1   = I2C_PRESC_400KHZ_MSB;
+  UCB0I2CSA = slave_address;	           // Set slave address
 
-  UCB1CTL1 &= ~UCSWRST;                    // Clear SW reset, resume operation
-  UCB1I2CIE = UCNACKIE;
-  UC1IE = UCB1TXIE;		           // Enable TX ready interrupt
+  UCB0CTL1 &= ~UCSWRST;                    // Clear SW reset, resume operation
+  UCB0IE = UCNACKIE;
+  UCB0IE = UCTXIE;		           // Enable TX ready interrupt
 }
 
 //------------------------------------------------------------------------------
@@ -116,7 +116,7 @@ i2c_receive_n(uint8_t byte_ctr, uint8_t *rx_buf) {
   rx_byte_ctr = byte_ctr;
   rx_buf_ptr  = rx_buf;
 
-  while ((UCB1CTL1 & UCTXSTT) || (UCB1STAT & UCNACKIFG))	// Slave acks address or not?
+  while ((UCB0CTL1 & UCTXSTT) || (UCB0STAT & UCNACKIFG))	// Slave acks address or not?
     PRINTFDEBUG ("____ UCTXSTT not clear OR NACK received\n");
 
 #if I2C_RX_WITH_INTERRUPT
@@ -125,14 +125,14 @@ i2c_receive_n(uint8_t byte_ctr, uint8_t *rx_buf) {
   // SPECIAL-CASE: Stop condition must be sent while receiving the 1st byte for 1-byte only read operations
   if(rx_byte_tot == 1){                 // See page 537 of slau144e.pdf
     dint();
-    UCB1CTL1 |= UCTXSTT;		// I2C start condition
-    while(UCB1CTL1 & UCTXSTT)           // Waiting for Start bit to clear
+    UCB0CTL1 |= UCTXSTT;		// I2C start condition
+    while(UCB0CTL1 & UCTXSTT)           // Waiting for Start bit to clear
       PRINTFDEBUG ("____ STT clear wait\n");
-    UCB1CTL1 |= UCTXSTP;		// I2C stop condition
+    UCB0CTL1 |= UCTXSTP;		// I2C stop condition
     eint();
   }
   else{                                 // all other cases
-    UCB1CTL1 |= UCTXSTT;		// I2C start condition
+    UCB0CTL1 |= UCTXSTT;		// I2C start condition
   }
   return 0;
 
@@ -141,17 +141,17 @@ i2c_receive_n(uint8_t byte_ctr, uint8_t *rx_buf) {
 
   PRINTFDEBUG(" RX Interrupts: NO \n");
 
-  UCB1CTL1 |= UCTXSTT;		// I2C start condition
+  UCB0CTL1 |= UCTXSTT;		// I2C start condition
 
   while (rx_byte_ctr > 0){
-    if (UC1IFG & UCB1RXIFG) {   // Waiting for Data
-      rx_buf[rx_byte_tot - rx_byte_ctr] = UCB1RXBUF;
+    if (UC0IFG & UCB0RXIFG) {   // Waiting for Data
+      rx_buf[rx_byte_tot - rx_byte_ctr] = UCB0RXBUF;
       rx_byte_ctr--;
-      UC1IFG &= ~UCB1RXIFG;     // Clear USCI_B1 RX int flag      
+      UC0IFG &= ~UCB0RXIFG;     // Clear USCI_B0 RX int flag      
       n_received++;
     }
   }
-  UCB1CTL1 |= UCTXSTP;		// I2C stop condition
+  UCB0CTL1 |= UCTXSTP;		// I2C stop condition
   return n_received;
 #endif
 }
@@ -167,7 +167,7 @@ i2c_receive_n(uint8_t byte_ctr, uint8_t *rx_buf) {
 //------------------------------------------------------------------------------
 uint8_t
 i2c_busy(void) {
-  return (UCB1STAT & UCBBUSY);
+  return (UCB0STAT & UCBBUSY);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -176,7 +176,6 @@ i2c_busy(void) {
 void
 i2c_enable(void) {
   I2C_PxSEL |= (I2C_SDA | I2C_SCL);    // Secondary function (USCI) selected
-  I2C_PxSEL2 |= (I2C_SDA | I2C_SCL);   // Secondary function (USCI) selected
   I2C_PxDIR |= I2C_SCL;	               // SCL is output (not needed?)
   I2C_PxDIR &= ~I2C_SDA;	       // SDA is input (not needed?)
   I2C_PxREN |= (I2C_SDA | I2C_SCL);    // Activate internal pull-up/-down resistors
@@ -186,7 +185,6 @@ i2c_enable(void) {
 void
 i2c_disable(void) {
   I2C_PxSEL &= ~(I2C_SDA | I2C_SCL);    // GPIO function selected
-  I2C_PxSEL2 &= ~(I2C_SDA | I2C_SCL);   // GPIO function selected
   I2C_PxREN &= ~(I2C_SDA | I2C_SCL);    // Deactivate internal pull-up/-down resistors
   I2C_PxOUT &= ~(I2C_SDA | I2C_SCL);    // Select pull-up resistors
 }
@@ -202,47 +200,48 @@ i2c_disable(void) {
 //------------------------------------------------------------------------------
 static volatile uint8_t tx_byte_tot = 0;
 void
-i2c_transmit_n(uint8_t byte_ctr, uint8_t *tx_buf) {
+i2c_transmit_n(uint8_t byte_ctr, uint8_t* tx_buf) {
   tx_byte_tot = byte_ctr;
   tx_byte_ctr = byte_ctr;
   tx_buf_ptr  = tx_buf;
-  UCB1CTL1 |= UCTR + UCTXSTT;	   // I2C TX, start condition
+  UCB0CTL1 |= UCTR + UCTXSTT;	   // I2C TX, start condition
 }
 
 /*----------------------------------------------------------------------------*/
-ISR(USCIAB1TX, i2c_tx_interrupt)
+ISR(USCI_B0, i2c_service_routine)
 {
   // TX Part
-  if (UC1IFG & UCB1TXIFG) {        // TX int. condition
+  if (UCB0IV == USCI_I2C_UCTXIFG) {        // TX int. condition
     if (tx_byte_ctr == 0) {
-      UCB1CTL1 |= UCTXSTP;	   // I2C stop condition
-      UC1IFG &= ~UCB1TXIFG;	   // Clear USCI_B1 TX int flag
+      UCB0CTL1 |= UCTXSTP;	   // I2C stop condition
+      UCB0IFG &= ~UCTXIFG;	   // Clear USCI_B0 TX int flag
     }
     else {
-      UCB1TXBUF = tx_buf_ptr[tx_byte_tot - tx_byte_ctr];
+      UCB0TXBUF = tx_buf_ptr[tx_byte_tot - tx_byte_ctr];
       tx_byte_ctr--;
     }
   }
   // RX Part
 #if I2C_RX_WITH_INTERRUPT
-  else if (UC1IFG & UCB1RXIFG){    // RX int. condition
-    rx_buf_ptr[rx_byte_tot - rx_byte_ctr] = UCB1RXBUF;
+  else if (UCB0IV == USCI_I2C_UCRXIFG) {    // RX int. condition
+    rx_buf_ptr[rx_byte_tot - rx_byte_ctr] = UCB0RXBUF;
     rx_byte_ctr--;
     if (rx_byte_ctr == 1){ //stop condition should be set before receiving last byte
       // Only for 1-byte transmissions, STOP is handled in receive_n_int
       if (rx_byte_tot != 1) 
-        UCB1CTL1 |= UCTXSTP;       // I2C stop condition
-        UC1IFG &= ~UCB1RXIFG;        // Clear USCI_B1 RX int flag. XXX Just in case, check if necessary
+        UCB0CTL1 |= UCTXSTP;       // I2C stop condition
+        UCB0IFG &= ~UCRXIFG;        // Clear USCI_B0 RX int flag. XXX Just in case, check if necessary
     }
   }
 #endif
 }
 
-ISR(USCIAB1RX, i2c_rx_interrupt)
+/*ISR(USCIAB0RX, i2c_rx_interrupt)
 {
-  if(UCB1STAT & UCNACKIFG) {
+  if(UCB0STAT & UCNACKIFG) {
     PRINTFDEBUG("!!! NACK received in RX\n");
-    UCB1CTL1 |= UCTXSTP;
-    UCB1STAT &= ~UCNACKIFG;
+    UCB0CTL1 |= UCTXSTP;
+    UCB0STAT &= ~UCNACKIFG;
   }
 }
+*/
