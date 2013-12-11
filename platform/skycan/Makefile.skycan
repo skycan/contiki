@@ -11,7 +11,7 @@ CLEAN += *.skycan symbols.c symbols.h
 ARCH=msp430.c leds.c watchdog.c \
      spix.c \
      rtimer-arch.c node-id.c leds-arch.c uart1x.c \
-     cfs-ram.c
+     cfs-ram.c i2c.c
 
 ifeq ($(WITH_SLIP),1)
 ARCH += slip_uart0.c
@@ -73,6 +73,12 @@ endif
 
 %.hex: %.ihex
 	mv $< $@
+
+%.eclipse: %.skycan
+	@echo "copy files to Debug directory, for using xpg.dk msp430 Eclipse plugin with mspdebug"
+	mkdir -p Debug
+	cp $< Debug/$(CONTIKI_PROJECT).elf
+	cp $(OBJECTDIR)/*.o Debug/
 
 %.upload: %.hex
 	msp430flasher -n msp430x5528 -e ERASE_MAIN -w $< -v -z [VCC]
