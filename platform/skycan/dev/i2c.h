@@ -47,10 +47,10 @@ void i2c_enable(void);
 void i2c_disable(void);
 
 void i2c_receiveinit(uint8_t slave_address);
-uint8_t i2c_receive_n(uint8_t byte_ctr, uint8_t *rx_buf);
+uint8_t i2c_receive_n(uint8_t len, uint8_t* rx_buf);
 
 void i2c_transmitinit(uint8_t slave_address);
-void i2c_transmit_n(uint8_t byte_ctr, uint8_t *tx_buf);
+void i2c_transmit_n(uint8_t len, uint8_t* tx_buf);
 
 uint8_t i2c_busy(void);
 

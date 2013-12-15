@@ -42,7 +42,10 @@
 #include "i2c.h"
 #include "isr_compat.h"
 
-signed   char tx_byte_ctr, rx_byte_ctr;
+unsigned char tx_byte_counter;
+unsigned char rx_byte_counter;
+uint8_t tx_byte_total = 0;
+uint8_t rx_byte_total = 0;
 unsigned char* tx_buf_ptr;
 unsigned char* rx_buf_ptr;
 
@@ -89,13 +92,12 @@ i2c_transmitinit(uint8_t slave_address)
   UCB0IE = UCTXIE;
 }
 
-static volatile uint8_t rx_byte_tot = 0;
 uint8_t
-i2c_receive_n(uint8_t byte_ctr, uint8_t *rx_buf)
+i2c_receive_n(uint8_t len, uint8_t* rx_buf)
 {
 
-  rx_byte_tot = byte_ctr;
-  rx_byte_ctr = byte_ctr;
+  rx_byte_total = len;
+  rx_byte_counter = len;
   rx_buf_ptr  = rx_buf;
 
   /* Slave acks address? */
@@ -105,7 +107,7 @@ i2c_receive_n(uint8_t byte_ctr, uint8_t *rx_buf)
    * Special case: stop condition must be sent while receiving the 1st byte for 1-byte only read operations.
    * See page 537 of slau144e.pdf
    */
-  if(rx_byte_tot == 1) {
+  if(rx_byte_total == 1) {
     dint();
     /* I2C start condition */
     UCB0CTL1 |= UCTXSTT;
@@ -147,12 +149,11 @@ i2c_disable(void)
   I2C_PxOUT &= ~(I2C_SDA | I2C_SCL);
 }
 
-static volatile uint8_t tx_byte_tot = 0;
 void
-i2c_transmit_n(uint8_t byte_ctr, uint8_t* tx_buf)
+i2c_transmit_n(uint8_t len, uint8_t* tx_buf)
 {
-  tx_byte_tot = byte_ctr;
-  tx_byte_ctr = byte_ctr;
+  tx_byte_total = len;
+  tx_byte_counter = len;
   tx_buf_ptr  = tx_buf;
 
   /* I2C TX, start condition */
@@ -167,24 +168,24 @@ ISR(USCI_B0, i2c_service_routine)
 
   /* Transmit buffer empty */
   if (source == USCI_I2C_UCTXIFG) {
-    if (tx_byte_ctr == 0) {
+    if (tx_byte_counter == 0) {
       /* I2C stop condition */
       UCB0CTL1 |= UCTXSTP;
     } else {
-      UCB0TXBUF = tx_buf_ptr[tx_byte_tot - tx_byte_ctr];
-      tx_byte_ctr--;
+      UCB0TXBUF = tx_buf_ptr[tx_byte_total - tx_byte_counter];
+      tx_byte_counter--;
     }
   }
   /* Data received */
   else if (source == USCI_I2C_UCRXIFG) {
-    rx_buf_ptr[rx_byte_tot - rx_byte_ctr] = UCB0RXBUF;
-    rx_byte_ctr--;
+    rx_buf_ptr[rx_byte_total - rx_byte_counter] = UCB0RXBUF;
+    rx_byte_counter--;
     /*
      * Stop condition should be set before receiving last byte.
      * For 1 byte transmissions it is handled in i2c_receive_n.
      */
-    if (rx_byte_ctr == 1){
-      if (rx_byte_tot != 1)
+    if (rx_byte_counter == 1){
+      if (rx_byte_total != 1)
         /* I2C stop condition */
         UCB0CTL1 |= UCTXSTP;
     }
