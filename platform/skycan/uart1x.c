@@ -76,35 +76,27 @@ uart1_writeb(unsigned char c)
 #endif /* ! WITH_UIP */
 /*---------------------------------------------------------------------------*/
 /**
- * Initalize the RS232 port.
+ * Initalize UART
  *
  */
 void
 uart1_init(unsigned long ubr)
 {
-  /* RS232 */
   UCA1CTL1 |= UCSWRST;            /* Hold peripheral in reset state */
   UCA1CTL1 |= UCSSEL_2;           /* CLK = SMCLK */
 
-  /* UCA1BR0 = 0x45;                 /\* 8MHz/115200 = 69 = 0x45 *\/ */
-  UCA1BR0 = ubr & 0xff; //0x45; /* tested... */
-  /* UCA1BR0 = 9; */
+  UCA1BR0 = ubr & 0xff;           /* 8MHz/115200 = 69 = 0x45 */
   UCA1BR1 = ubr >> 8;
   UCA1MCTL = UCBRS_3;             /* Modulation UCBRSx = 3 */
-  P5DIR &= ~0x80;                 /* P5.7 = USCI_A1 RXD as input */
-  P5DIR |= 0x40;                  /* P5.6 = USCI_A1 TXD as output */
-  P5SEL |= 0xc0;                  /* P5.6,7 = USCI_A1 TXD/RXD */
-
-  /*UCA1CTL1 &= ~UCSWRST;*/       /* Initialize USCI state machine */
+  P4SEL |= 0x30;                  /* P4.4,5 = USCI_A1 TXD/RXD */
 
   transmitting = 0;
 
-  /* XXX Clear pending interrupts before enable */
-  UCA1IE &= ~UCRXIFG;
+  UCA1IE &= ~UCRXIFG;             /* Clear pending interrupts before enable */
   UCA1IE &= ~UCTXIFG;
 
-  UCA1CTL1 &= ~UCSWRST;                   /* Initialize USCI state machine **before** enabling interrupts */
-  UCA1IE |= UCRXIE;                        /* Enable UCA1 RX interrupt */
+  UCA1CTL1 &= ~UCSWRST;           /* Initialize USCI state machine **before** enabling interrupts */
+  UCA1IE |= UCRXIE;               /* Enable UCA1 RX interrupt */
 }
 /*---------------------------------------------------------------------------*/
 ISR(USCI_A1, uart1_rx_interrupt)
@@ -112,10 +104,10 @@ ISR(USCI_A1, uart1_rx_interrupt)
   uint8_t c;
 
   ENERGEST_ON(ENERGEST_TYPE_IRQ);
-  /*leds_toggle(LEDS_ALL);*/
+
   if(UCA1IV == 2) {
     if(UCA1STAT & UCRXERR) {
-      c = UCA1RXBUF;   /* Clear error flags by forcing a dummy read. */
+      c = UCA1RXBUF;              /* Clear error flags by forcing a dummy read. */
     } else {
       c = UCA1RXBUF;
       if(uart1_input_handler != NULL) {
