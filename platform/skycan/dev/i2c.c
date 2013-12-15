@@ -32,10 +32,11 @@
 
 /**
  * \file
- *         I2C communication device drivers for Zolertia Z1 sensor node.
+ *         I2C communication device driver for MSP430F5xxx.
  * \author
  *         Enric M. Calvo, Zolertia <ecalvo@zolertia.com>
  *         Marcus Lundén, SICS <mlunden@sics.se>
+ *         Andres Vahter <andres.vahter@gmail.com>
  */
 
 #include "i2c.h"
@@ -44,191 +45,148 @@
 signed   char tx_byte_ctr, rx_byte_ctr;
 unsigned char* tx_buf_ptr;
 unsigned char* rx_buf_ptr;
-unsigned char receive_data;
-unsigned char transmit_data1;
-unsigned char transmit_data2;
-volatile unsigned int i;	// volatile to prevent optimization
 
-//------------------------------------------------------------------------------
-// void i2c_receiveinit(unsigned char slave_address,
-//                              unsigned char prescale)
-//
-// This function initializes the USCI module for master-receive operation.
-//
-// IN:   unsigned char slave_address   =>  Slave Address
-//       unsigned char prescale        =>  SCL clock adjustment
-//-----------------------------------------------------------------------------
 void
-i2c_receiveinit(uint8_t slave_address) {
-  UCB0CTL1 = UCSWRST;                    // Enable SW reset
-  UCB0CTL0 = UCMST + UCMODE_3 + UCSYNC;  // I2C Master, synchronous mode
-  UCB0CTL1 = UCSSEL_2 | UCSWRST;         // Use SMCLK, keep SW reset
+i2c_receiveinit(uint8_t slave_address)
+{
+  /* Enable SW reset */
+  UCB0CTL1 = UCSWRST;
+  /* I2C master, synchronous mode */
+  UCB0CTL0 = UCMST + UCMODE_3 + UCSYNC;
+  /* Use SMCLK, keep SW reset */
+  UCB0CTL1 = UCSSEL_2 | UCSWRST;
   UCB0BR0  = I2C_PRESC_100KHZ_LSB;
   UCB0BR1  = I2C_PRESC_100KHZ_MSB;
-  UCB0I2CSA = slave_address;	         // set slave address
+  UCB0I2CSA = slave_address;
 
-  UCB0CTL1 &= ~UCTR;		         // I2C Receiver
+  /* I2C receiver */
+  UCB0CTL1 &= ~UCTR;
 
-  UCB0CTL1 &= ~UCSWRST;	                 // Clear SW reset, resume operation
+  /* Clear SW reset, resume operation */
+  UCB0CTL1 &= ~UCSWRST;
   UCB0IE = UCNACKIE;
-#if I2C_RX_WITH_INTERRUPT
-  UCB0IE = UCRXIE;                      // Enable RX interrupt if desired
-#endif
+  /* Enable RX interrupt */
+  UCB0IE = UCRXIE;
 }
 
-//------------------------------------------------------------------------------
-// void i2c_transmitinit(unsigned char slave_address,
-//                               unsigned char prescale)
-//
-// Initializes USCI for master-transmit operation.
-//
-// IN:   unsigned char slave_address   =>  Slave Address
-//       unsigned char prescale        =>  SCL clock adjustment
-//------------------------------------------------------------------------------
 void
-i2c_transmitinit(uint8_t slave_address) {
-  UCB0CTL1 |= UCSWRST;		           // Enable SW reset
-  UCB0CTL0 |= (UCMST | UCMODE_3 | UCSYNC); // I2C Master, synchronous mode
-  UCB0CTL1  = UCSSEL_2 + UCSWRST;          // Use SMCLK, keep SW reset
+i2c_transmitinit(uint8_t slave_address)
+{
+  /* Enable SW reset */
+  UCB0CTL1 |= UCSWRST;
+  /* I2C master, synchronous mode */
+  UCB0CTL0 |= (UCMST | UCMODE_3 | UCSYNC);
+  /* Use SMCLK, keep SW reset */
+  UCB0CTL1  = UCSSEL_2 + UCSWRST;
   UCB0BR0   = I2C_PRESC_100KHZ_LSB;
   UCB0BR1   = I2C_PRESC_100KHZ_MSB;
-  UCB0I2CSA = slave_address;	           // Set slave address
+  UCB0I2CSA = slave_address;
 
-  UCB0CTL1 &= ~UCSWRST;                    // Clear SW reset, resume operation
+  /* Clear SW reset, resume operation */
+  UCB0CTL1 &= ~UCSWRST;
   UCB0IE = UCNACKIE;
-  UCB0IE = UCTXIE;		           // Enable TX ready interrupt
+  /* Enable TX ready interrupt */
+  UCB0IE = UCTXIE;
 }
 
-//------------------------------------------------------------------------------
-// void i2c_receive_n(unsigned char byte_ctr, unsigned char * rx_buf)
-// This function is used to start an I2C communication in master-receiver mode WITHOUT INTERRUPTS
-// for more than 1 byte
-// IN:   unsigned char byte_ctr   =>  number of bytes to be read
-// OUT:  unsigned char rx_buf     =>  receive data buffer
-// OUT:  int n_received           =>  number of bytes read
-//------------------------------------------------------------------------------
 static volatile uint8_t rx_byte_tot = 0;
 uint8_t
-i2c_receive_n(uint8_t byte_ctr, uint8_t *rx_buf) {
+i2c_receive_n(uint8_t byte_ctr, uint8_t *rx_buf)
+{
 
   rx_byte_tot = byte_ctr;
   rx_byte_ctr = byte_ctr;
   rx_buf_ptr  = rx_buf;
 
-  while ((UCB0CTL1 & UCTXSTT) || (UCB0STAT & UCNACKIFG))	// Slave acks address or not?
-    PRINTFDEBUG ("____ UCTXSTT not clear OR NACK received\n");
+  /* Slave acks address? */
+  while ((UCB0CTL1 & UCTXSTT) || (UCB0STAT & UCNACKIFG)) {}
 
-#if I2C_RX_WITH_INTERRUPT
-  PRINTFDEBUG(" RX Interrupts: YES \n");
-
-  // SPECIAL-CASE: Stop condition must be sent while receiving the 1st byte for 1-byte only read operations
-  if(rx_byte_tot == 1){                 // See page 537 of slau144e.pdf
+  /*
+   * Special case: stop condition must be sent while receiving the 1st byte for 1-byte only read operations.
+   * See page 537 of slau144e.pdf
+   */
+  if(rx_byte_tot == 1) {
     dint();
-    UCB0CTL1 |= UCTXSTT;		// I2C start condition
-    while(UCB0CTL1 & UCTXSTT)           // Waiting for Start bit to clear
-      PRINTFDEBUG ("____ STT clear wait\n");
-    UCB0CTL1 |= UCTXSTP;		// I2C stop condition
+    /* I2C start condition */
+    UCB0CTL1 |= UCTXSTT;
+
+    /* Waiting for Start bit to clear */
+    while(UCB0CTL1 & UCTXSTT) {}
+
+    /* I2C stop condition */
+    UCB0CTL1 |= UCTXSTP;
     eint();
-  }
-  else{                                 // all other cases
-    UCB0CTL1 |= UCTXSTT;		// I2C start condition
+  } else {
+    /* I2C start condition */
+    UCB0CTL1 |= UCTXSTT;
   }
   return 0;
-
-#else
-  uint8_t n_received = 0;
-
-  PRINTFDEBUG(" RX Interrupts: NO \n");
-
-  UCB0CTL1 |= UCTXSTT;		// I2C start condition
-
-  while (rx_byte_ctr > 0){
-    if (UCB0IFG & UCRXIFG) {   // Waiting for Data
-      rx_buf[rx_byte_tot - rx_byte_ctr] = UCB0RXBUF;
-      rx_byte_ctr--;
-      UCB0IFG &= ~UCRXIFG;     // Clear USCI_B0 RX int flag
-      n_received++;
-    }
-  }
-  UCB0CTL1 |= UCTXSTP;		// I2C stop condition
-  return n_received;
-#endif
 }
 
-
-//------------------------------------------------------------------------------
-// uint8_t i2c_busy()
-//
-// This function is used to check if there is communication in progress.
-//
-// OUT:  unsigned char  =>  0: I2C bus is idle,
-//                          1: communication is in progress
-//------------------------------------------------------------------------------
 uint8_t
-i2c_busy(void) {
+i2c_busy(void)
+{
   return (UCB0STAT & UCBBUSY);
 }
 
-/*----------------------------------------------------------------------------*/
-/* Setup ports and pins for I2C use. */
-
 void
-i2c_enable(void) {
-  I2C_PxSEL |= (I2C_SDA | I2C_SCL);    // Secondary function (USCI) selected
+i2c_enable(void)
+{
+  I2C_PxSEL |= (I2C_SDA | I2C_SCL);
 }
 
 void
-i2c_disable(void) {
-  I2C_PxSEL &= ~(I2C_SDA | I2C_SCL);    // GPIO function selected
-  I2C_PxREN &= ~(I2C_SDA | I2C_SCL);    // Deactivate internal pull-up/-down resistors
+i2c_disable(void)
+{
+  /*
+   * GPIO function selected
+   * Deactivate internal pull-up/-down resistors
+   */
+  I2C_PxSEL &= ~(I2C_SDA | I2C_SCL);
+  I2C_PxREN &= ~(I2C_SDA | I2C_SCL);
   I2C_PxOUT &= ~(I2C_SDA | I2C_SCL);
 }
 
-/*----------------------------------------------------------------------------*/
-//------------------------------------------------------------------------------
-// void i2c_transmit_n(unsigned char byte_ctr, unsigned char *field)
-//
-// This function is used to start an I2C communication in master-transmit mode.
-//
-// IN:   unsigned char byte_ctr   =>  number of bytes to be transmitted
-//       unsigned char *tx_buf    =>  Content to transmit. Read and transmitted from [0] to [byte_ctr]
-//------------------------------------------------------------------------------
 static volatile uint8_t tx_byte_tot = 0;
 void
-i2c_transmit_n(uint8_t byte_ctr, uint8_t* tx_buf) {
+i2c_transmit_n(uint8_t byte_ctr, uint8_t* tx_buf)
+{
   tx_byte_tot = byte_ctr;
   tx_byte_ctr = byte_ctr;
   tx_buf_ptr  = tx_buf;
-  UCB0CTL1 |= UCTR + UCTXSTT;	   // I2C TX, start condition
+
+  /* I2C TX, start condition */
+  UCB0CTL1 |= UCTR + UCTXSTT;
 }
 
-/*----------------------------------------------------------------------------*/
+
 ISR(USCI_B0, i2c_service_routine)
 {
-  // we do not want to use switch-case here, because of contiki
+  /* We do not want to use switch-case, because of contiki. */
   uint16_t source = UCB0IV;
 
-  // TX Part
-  if (source == USCI_I2C_UCTXIFG) {        // TX int. condition
+  /* Transmit buffer empty */
+  if (source == USCI_I2C_UCTXIFG) {
     if (tx_byte_ctr == 0) {
-      UCB0CTL1 |= UCTXSTP;	   // I2C stop condition
-      UCB0IFG &= ~UCTXIFG;	   // Clear USCI_B0 TX int flag
-    }
-    else {
+      /* I2C stop condition */
+      UCB0CTL1 |= UCTXSTP;
+    } else {
       UCB0TXBUF = tx_buf_ptr[tx_byte_tot - tx_byte_ctr];
       tx_byte_ctr--;
     }
   }
-  // RX Part
-#if I2C_RX_WITH_INTERRUPT
-  else if (source == USCI_I2C_UCRXIFG) {    // RX int. condition
+  /* Data received */
+  else if (source == USCI_I2C_UCRXIFG) {
     rx_buf_ptr[rx_byte_tot - rx_byte_ctr] = UCB0RXBUF;
     rx_byte_ctr--;
-    if (rx_byte_ctr == 1){ //stop condition should be set before receiving last byte
-      // Only for 1-byte transmissions, STOP is handled in receive_n_int
+    /*
+     * Stop condition should be set before receiving last byte.
+     * For 1 byte transmissions it is handled in i2c_receive_n.
+     */
+    if (rx_byte_ctr == 1){
       if (rx_byte_tot != 1)
-        UCB0CTL1 |= UCTXSTP;       // I2C stop condition
+        /* I2C stop condition */
+        UCB0CTL1 |= UCTXSTP;
     }
   }
-#endif
 }
