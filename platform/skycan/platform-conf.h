@@ -91,6 +91,12 @@ typedef unsigned long off_t;
 #define CFS_RAM_CONF_SIZE 4096
 
 /*
+ * I2C bus configuration
+ * Currently only polling based version works
+ */
+#define I2C_CONF_RX_WITH_INTERRUPT 0
+
+/*
  * SPI bus configuration for the TMote Sky.
  */
 

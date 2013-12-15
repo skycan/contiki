@@ -66,14 +66,14 @@ uint8_t i2c_busy(void);
 #define I2C_SCL       (1 << 1)    // SCL == P3.1
 #define I2C_PRESC_1KHZ_LSB      0x00 
 #define I2C_PRESC_1KHZ_MSB      0x20
-#define I2C_PRESC_100KHZ_LSB    0x50 
+#define I2C_PRESC_100KHZ_LSB    0x50
 #define I2C_PRESC_100KHZ_MSB    0x00
 #define I2C_PRESC_400KHZ_LSB    0x14 
 #define I2C_PRESC_400KHZ_MSB    0x00
 
 // I2C configuration with RX interrupts
 #ifdef I2C_CONF_RX_WITH_INTERRUPT
-#define I2C_RX_WITH_INTERRUPT I2C_CONF_RX_WITH_INTERRUPT // XXX Move I2C_CONF_RX_WITH_INTERRUPT to contiki-conf.h or platform-conf.h
+#define I2C_RX_WITH_INTERRUPT I2C_CONF_RX_WITH_INTERRUPT
 #else /* I2C_CONF_RX_WITH_INTERRUPT */
 #define I2C_RX_WITH_INTERRUPT 1
 #endif /* I2C_CONF_RX_WITH_INTERRUPT */
