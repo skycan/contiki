@@ -205,8 +205,11 @@ i2c_transmit_n(uint8_t byte_ctr, uint8_t* tx_buf) {
 /*----------------------------------------------------------------------------*/
 ISR(USCI_B0, i2c_service_routine)
 {
+  // we do not want to use switch-case here, because of contiki
+  uint16_t source = UCB0IV;
+
   // TX Part
-  if (UCB0IV == USCI_I2C_UCTXIFG) {        // TX int. condition
+  if (source == USCI_I2C_UCTXIFG) {        // TX int. condition
     if (tx_byte_ctr == 0) {
       UCB0CTL1 |= UCTXSTP;	   // I2C stop condition
       UCB0IFG &= ~UCTXIFG;	   // Clear USCI_B0 TX int flag
@@ -218,25 +221,14 @@ ISR(USCI_B0, i2c_service_routine)
   }
   // RX Part
 #if I2C_RX_WITH_INTERRUPT
-  else if (UCB0IV == USCI_I2C_UCRXIFG) {    // RX int. condition
+  else if (source == USCI_I2C_UCRXIFG) {    // RX int. condition
     rx_buf_ptr[rx_byte_tot - rx_byte_ctr] = UCB0RXBUF;
     rx_byte_ctr--;
     if (rx_byte_ctr == 1){ //stop condition should be set before receiving last byte
       // Only for 1-byte transmissions, STOP is handled in receive_n_int
       if (rx_byte_tot != 1)
         UCB0CTL1 |= UCTXSTP;       // I2C stop condition
-        UCB0IFG &= ~UCRXIFG;        // Clear USCI_B0 RX int flag. XXX Just in case, check if necessary
     }
   }
 #endif
 }
-
-/*ISR(USCIAB0RX, i2c_rx_interrupt)
-{
-  if(UCB0STAT & UCNACKIFG) {
-    PRINTFDEBUG("!!! NACK received in RX\n");
-    UCB0CTL1 |= UCTXSTP;
-    UCB0STAT &= ~UCNACKIFG;
-  }
-}
-*/
