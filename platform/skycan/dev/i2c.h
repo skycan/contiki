@@ -54,36 +54,19 @@ void i2c_transmit_n(uint8_t byte_ctr, uint8_t *tx_buf);
 
 uint8_t i2c_busy(void);
 
-//XXX Should these defines be in the contiki-conf.h to make it more platform-independent?
 #define I2C_PxDIR   P3DIR
 #define I2C_PxIN    P3IN
 #define I2C_PxOUT   P3OUT
 #define I2C_PxSEL   P3SEL
 #define I2C_PxREN   P3REN
 
-
-#define I2C_SDA       (1 << 0)    // SDA == P3.0 
+#define I2C_SDA       (1 << 0)    // SDA == P3.0
 #define I2C_SCL       (1 << 1)    // SCL == P3.1
-#define I2C_PRESC_1KHZ_LSB      0x00 
+#define I2C_PRESC_1KHZ_LSB      0x00
 #define I2C_PRESC_1KHZ_MSB      0x20
 #define I2C_PRESC_100KHZ_LSB    0x50
 #define I2C_PRESC_100KHZ_MSB    0x00
-#define I2C_PRESC_400KHZ_LSB    0x14 
+#define I2C_PRESC_400KHZ_LSB    0x14
 #define I2C_PRESC_400KHZ_MSB    0x00
-
-// I2C configuration with RX interrupts
-#ifdef I2C_CONF_RX_WITH_INTERRUPT
-#define I2C_RX_WITH_INTERRUPT I2C_CONF_RX_WITH_INTERRUPT
-#else /* I2C_CONF_RX_WITH_INTERRUPT */
-#define I2C_RX_WITH_INTERRUPT 1
-#endif /* I2C_CONF_RX_WITH_INTERRUPT */
-
-
-#if 0
-#include <stdio.h>
-#define PRINTFDEBUG(...) printf(__VA_ARGS__)
-#else
-#define PRINTFDEBUG(...)
-#endif
 
 #endif    /* #ifdef I2CMASTER_H_ */
