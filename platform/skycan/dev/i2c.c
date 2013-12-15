@@ -166,6 +166,8 @@ ISR(USCI_B0, i2c_service_routine)
   /* We do not want to use switch-case, because of contiki. */
   uint16_t source = UCB0IV;
 
+  ENERGEST_ON(ENERGEST_TYPE_IRQ);
+
   /* Transmit buffer empty */
   if (source == USCI_I2C_UCTXIFG) {
     if (tx_byte_counter == 0) {
@@ -190,4 +192,6 @@ ISR(USCI_B0, i2c_service_routine)
         UCB0CTL1 |= UCTXSTP;
     }
   }
+
+  ENERGEST_OFF(ENERGEST_TYPE_IRQ);
 }
