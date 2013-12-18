@@ -44,6 +44,8 @@ extern const struct sensors_sensor gauge_sensor;
 #define GAUGE_SENSOR "Gauge"
 
 /* The type values used in the value() function. */
-#define GAUGE_TEMPERATURE	1
+#define GAUGE_TEMPERATURE		1
+#define GAUGE_BATTERY_VOLTAGE	2
+#define GAUGE_CURRENT			3
 
 #endif /* GAUGE_SENSOR_H_ */

@@ -120,16 +120,32 @@ read_reg(uint8_t reg) {
 static int
 value(int type)
 {
-  uint16_t templh;
+  uint16_t tmp;
 
   switch(type) {
     case GAUGE_TEMPERATURE:
-      templh = read_reg(BQ27x10CMD_TEMP_LSB);
+      tmp = read_reg(BQ27x10CMD_TEMP_LSB);
       /*
-       * Datasheet page 14: Temperature = 0.25 * (256 * TEMPH + TEMPL) Kelvins
+       * Datasheet page 14: Temperature = 0.25 * (256 * TEMPH + TEMPL) [K]
        * Lets convert it to Celsius throwing away fractional part
        */
-      return (256 * (templh & 0xFF) + (templh >> 8)) / 4 - 273;
+      return (256 * (tmp & 0xFF) + (tmp >> 8)) / 4 - 273;
+      break;
+
+    case GAUGE_BATTERY_VOLTAGE:
+      /* Battery voltage [mV] */
+      tmp = read_reg(BQ27x10CMD_VOLT_LSB);
+      return (tmp << 8)| (tmp >> 8);
+      break;
+
+    case GAUGE_CURRENT:
+      /*
+       * Datasheet page 16: Average Current = (256 * AIH + AIL) * 3.57 / Rs [mA]
+       * Where Rs is sense resistor in mOhms, it is 20 mOhms in our case
+       * Lets throw away fractional part.
+       */
+      tmp = read_reg(BQ27x10CMD_AI_LSB);
+      return (256 * (tmp & 0xFF) + (tmp >> 8)) * 357 / 2000;
       break;
 
     default:
