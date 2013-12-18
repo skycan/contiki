@@ -125,14 +125,14 @@ main(int argc, char **argv)
 
   leds_on(LEDS_GREEN);
   /* xmem_init(); */
-  
+
   rtimer_init();
 
   PRINTF(CONTIKI_VERSION_STRING "\n");
   /*
    * Hardware initialization done!
    */
-  
+
   leds_on(LEDS_RED);
   /* Restore node id if such has been stored in external mem */
 
@@ -206,8 +206,7 @@ main(int argc, char **argv)
 #endif /* TIMESYNCH_CONF_ENABLED */
 
 
-  /*  process_start(&sensors_process, NULL);
-      SENSORS_ACTIVATE(button_sensor);*/
+  process_start(&sensors_process, NULL);
 
   energest_init();
   ENERGEST_ON(ENERGEST_TYPE_CPU);

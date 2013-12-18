@@ -8,10 +8,7 @@ endif
 
 CLEAN += *.skycan symbols.c symbols.h
 
-ARCH=msp430.c leds.c watchdog.c \
-     spix.c \
-     rtimer-arch.c node-id.c leds-arch.c uart1x.c \
-     cfs-ram.c i2c.c
+ARCH=msp430.c leds.c watchdog.c spix.c rtimer-arch.c node-id.c leds-arch.c uart1x.c cfs-ram.c
 
 ifeq ($(WITH_SLIP),1)
 ARCH += slip_uart0.c
@@ -54,6 +51,7 @@ endif
 endif
 
 CONTIKI_TARGET_SOURCEFILES += $(ARCH) $(UIPDRIVERS)
+CONTIKI_TARGET_SOURCEFILES += i2c.c sensors.c skycan-sensors.c gauge-sensor.c
 
 ifdef IAR
 MCU=msp430f5528a
