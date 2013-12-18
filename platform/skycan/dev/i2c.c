@@ -163,34 +163,34 @@ i2c_transmit_n(uint8_t len, uint8_t* tx_buf)
 
 ISR(USCI_B0, i2c_service_routine)
 {
-  /* We do not want to use switch-case, because of contiki. */
-  uint16_t source = UCB0IV;
-
   ENERGEST_ON(ENERGEST_TYPE_IRQ);
 
-  /* Transmit buffer empty */
-  if (source == USCI_I2C_UCTXIFG) {
-    if (tx_byte_counter == 0) {
-      /* I2C stop condition */
-      UCB0CTL1 |= UCTXSTP;
-    } else {
-      UCB0TXBUF = tx_buf_ptr[tx_byte_total - tx_byte_counter];
-      tx_byte_counter--;
-    }
-  }
-  /* Data received */
-  else if (source == USCI_I2C_UCRXIFG) {
-    rx_buf_ptr[rx_byte_total - rx_byte_counter] = UCB0RXBUF;
-    rx_byte_counter--;
-    /*
-     * Stop condition should be set before receiving last byte.
-     * For 1 byte transmissions it is handled in i2c_receive_n.
-     */
-    if (rx_byte_counter == 1){
-      if (rx_byte_total != 1)
+  switch (UCB0IV) {
+    /* Transmit buffer empty */
+    case USCI_I2C_UCTXIFG:
+      if (tx_byte_counter == 0) {
         /* I2C stop condition */
         UCB0CTL1 |= UCTXSTP;
-    }
+      } else {
+        UCB0TXBUF = tx_buf_ptr[tx_byte_total - tx_byte_counter];
+        tx_byte_counter--;
+      }
+      break;
+
+    /* Data received */
+    case USCI_I2C_UCRXIFG:
+      rx_buf_ptr[rx_byte_total - rx_byte_counter] = UCB0RXBUF;
+      rx_byte_counter--;
+      /*
+       * Stop condition should be set before receiving last byte.
+       * For 1 byte transmissions it is handled in i2c_receive_n.
+       */
+      if (rx_byte_counter == 1){
+        if (rx_byte_total != 1)
+          /* I2C stop condition */
+          UCB0CTL1 |= UCTXSTP;
+      }
+      break;
   }
 
   ENERGEST_OFF(ENERGEST_TYPE_IRQ);
